@@ -1,0 +1,311 @@
+{
+  "sample_rate": 48000,
+  "cutoff_hz": 18000.0,
+  "f0_hz": 3400.0,
+  "drive": 8.0,
+  "transfer": "hard_clip",
+  "independent_reference": "saturation.reference",
+  "alias_bins_hz": [
+    20800.0,
+    17400.0,
+    14000.0,
+    10600.0,
+    7200.0
+  ],
+  "estimator_selection": {
+    "chosen": "offline_factor2",
+    "candidates": {
+      "offline_factor2": {
+        "bound_energy": 0.0001494728560449298,
+        "method": "offline_factor2_windowed_sinc",
+        "db_above_x1": 55.92850607208988,
+        "db_below_x8": 0.2704655362998125,
+        "discriminates": true
+      },
+      "band_difference": {
+        "bound_energy": 0.1312137452145705,
+        "method": "band_difference_static_curve_4x",
+        "db_above_x1": -2.939833904157198,
+        "db_below_x8": 59.13880551254689,
+        "discriminates": false
+      }
+    },
+    "measured_x1": 0.09353790453105228,
+    "measured_x8": 0.00014489021472622896,
+    "f0_hz": 3400.0
+  },
+  "alias_control": {
+    "bound": 0.0001494728560449298,
+    "bound_estimator": "offline_factor2",
+    "factors": {
+      "1": {
+        "alias_energy": 0.09353790453105228,
+        "image_energy": 0.12280153406326644,
+        "fold_levels": {
+          "20800.0": 3.983144144115844e-13,
+          "17400.0": 0.07266105016691338,
+          "14000.0": 9.804977241089397e-13,
+          "10600.0": 0.05890425598122387,
+          "7200.0": 2.473700238060888e-12
+        },
+        "latency": {
+          "ok": true,
+          "reported": 0,
+          "expected": 0,
+          "delta": 0
+        },
+        "impulse_timing": {
+          "peak_index": 64,
+          "expected_peak_index": 64,
+          "peak_delta": 0,
+          "centroid": 64.52412438451555,
+          "expected_centroid": 64.0,
+          "centroid_delta": 0.5241243845155452
+        },
+        "passband": {
+          "low": {
+            "shape_corr": 1.0,
+            "highband_loss_db": 0.0
+          },
+          "high": {
+            "shape_corr": 1.0,
+            "highband_loss_db": 0.0
+          }
+        },
+        "polarity_even_energy": 0.0,
+        "polarity_odd_energy": 1.5844656323881794,
+        "alias_vs_bound_db": 55.92850607208988
+      },
+      "2": {
+        "alias_energy": 0.00013825911155887057,
+        "image_energy": 9.462963633547078e-05,
+        "fold_levels": {
+          "20800.0": 2.3718974031502414e-13,
+          "17400.0": 7.937937260282622e-05,
+          "14000.0": 8.59469573869345e-13,
+          "10600.0": 0.0001132011357462013,
+          "7200.0": 2.286383613867814e-12
+        },
+        "latency": {
+          "ok": true,
+          "reported": 98,
+          "expected": 98,
+          "delta": 0
+        },
+        "impulse_timing": {
+          "peak_index": 163,
+          "expected_peak_index": 162,
+          "peak_delta": 1,
+          "centroid": 162.64824055538298,
+          "expected_centroid": 162.0,
+          "centroid_delta": 0.6482405553829835
+        },
+        "passband": {
+          "low": {
+            "shape_corr": 0.9999998726716658,
+            "highband_loss_db": -0.10070283558379044
+          },
+          "high": {
+            "shape_corr": 0.9997684530033313,
+            "highband_loss_db": -0.2558230381883238
+          }
+        },
+        "polarity_even_energy": 0.0,
+        "polarity_odd_energy": 1.5577251076302927,
+        "alias_vs_bound_db": -0.6773714208631834
+      },
+      "4": {
+        "alias_energy": 0.00014701167147305547,
+        "image_energy": 9.175273970451005e-05,
+        "fold_levels": {
+          "20800.0": 2.294434331434543e-13,
+          "17400.0": 7.999662049603603e-05,
+          "14000.0": 7.26063841217833e-13,
+          "10600.0": 0.0001233408782947275,
+          "7200.0": 2.163563151391911e-12
+        },
+        "latency": {
+          "ok": true,
+          "reported": 98,
+          "expected": 98,
+          "delta": 0
+        },
+        "impulse_timing": {
+          "peak_index": 163,
+          "expected_peak_index": 162,
+          "peak_delta": 1,
+          "centroid": 162.78437981373781,
+          "expected_centroid": 162.0,
+          "centroid_delta": 0.7843798137378144
+        },
+        "passband": {
+          "low": {
+            "shape_corr": 0.9999997866308099,
+            "highband_loss_db": -0.12960233842700797
+          },
+          "high": {
+            "shape_corr": 0.9996253212804163,
+            "highband_loss_db": -0.3258230347110823
+          }
+        },
+        "polarity_even_energy": 0.0,
+        "polarity_odd_energy": 1.553490250407283,
+        "alias_vs_bound_db": -0.14421034928704982
+      },
+      "8": {
+        "alias_energy": 0.00014489021472622896,
+        "image_energy": 9.265958527602209e-06,
+        "fold_levels": {
+          "20800.0": 2.2164495177901782e-13,
+          "17400.0": 7.806827329552404e-05,
+          "14000.0": 1.0680920319992426e-12,
+          "10600.0": 0.00012205948970919097,
+          "7200.0": 2.6050972917737877e-12
+        },
+        "latency": {
+          "ok": true,
+          "reported": 98,
+          "expected": 98,
+          "delta": 0
+        },
+        "impulse_timing": {
+          "peak_index": 163,
+          "expected_peak_index": 162,
+          "peak_delta": 1,
+          "centroid": 162.8724960033682,
+          "expected_centroid": 162.0,
+          "centroid_delta": 0.8724960033682123
+        },
+        "passband": {
+          "low": {
+            "shape_corr": 0.99999975730833,
+            "highband_loss_db": -0.13745231244527978
+          },
+          "high": {
+            "shape_corr": 0.999583138475525,
+            "highband_loss_db": -0.3436851743597929
+          }
+        },
+        "polarity_even_energy": 0.0,
+        "polarity_odd_energy": 1.5524511647936439,
+        "alias_vs_bound_db": -0.27046553629981196
+      }
+    }
+  },
+  "level_examples": {
+    "high_level_drive": {
+      "alias_energy": 0.00014489021472622896,
+      "image_energy": 9.265958527602209e-06
+    },
+    "extremely_low_level": {
+      "alias_energy": 1.534824366511488e-16,
+      "image_energy": 1.7604338046779586e-15
+    }
+  },
+  "alias_faults": {
+    "remove_antialias": {
+      "alias_energy": 0.04475906203269836,
+      "image_energy": 0.08457139174686785,
+      "latency": {
+        "ok": true,
+        "reported": 98,
+        "expected": 98,
+        "delta": 0
+      },
+      "alias_gain_db_vs_healthy": 49.79683841733611,
+      "recording_diff_rms": 0.07178035409615514
+    },
+    "decimation_grid": {
+      "alias_energy": 0.00014578726093555363,
+      "image_energy": 9.263831571480284e-06,
+      "impulse_timing": {
+        "peak_index": 163,
+        "expected_peak_index": 162,
+        "peak_delta": 1,
+        "centroid": 163.3485817759116,
+        "expected_centroid": 162.0,
+        "centroid_delta": 1.3485817759116117
+      },
+      "latency_report_unchanged": true
+    }
+  },
+  "sweeps": {
+    "sweep_low": {
+      "1": {
+        "shape_corr": 0.9736361558274375,
+        "fold_band_energy": 0.00011885858705905734
+      },
+      "8": {
+        "shape_corr": 0.973759933678133,
+        "fold_band_energy": 3.3018649592840355e-08
+      }
+    },
+    "sweep_high": {
+      "1": {
+        "shape_corr": 0.9791153190691442,
+        "fold_band_energy": 0.03916546047923177
+      },
+      "8": {
+        "shape_corr": 0.9855109421727681,
+        "fold_band_energy": 7.440310644056985e-06
+      }
+    }
+  },
+  "bus_reported_latency": 98,
+  "bus_comb": {
+    "misalign_1": {
+      "deepest_ratio": 0.6352960791579678,
+      "p5_ratio": 0.6869711975332582,
+      "fraction_below_minus_6db": 0.0,
+      "notch_db": 3.9404764996186814
+    },
+    "misalign_2": {
+      "deepest_ratio": 0.482233349517707,
+      "p5_ratio": 0.5324373967854258,
+      "fraction_below_minus_6db": 0.0054989816700610995,
+      "notch_db": 6.334855173608328
+    },
+    "misalign_4": {
+      "deepest_ratio": 0.39089589926887064,
+      "p5_ratio": 0.4581986069120705,
+      "fraction_below_minus_6db": 0.08503054989816701,
+      "notch_db": 8.158777711017805
+    },
+    "misalign_8": {
+      "deepest_ratio": 0.09202745035279623,
+      "p5_ratio": 0.4714702627976165,
+      "fraction_below_minus_6db": 0.07230142566191446,
+      "notch_db": 20.721652201132624
+    },
+    "aligned_self": {
+      "deepest_ratio": 1.0,
+      "p5_ratio": 1.0,
+      "fraction_below_minus_6db": 0.0,
+      "notch_db": -8.686661818707667e-12
+    }
+  },
+  "bus_automation": {
+    "events": [
+      {
+        "sample_time": 24000,
+        "kind": "beat_automation",
+        "detail": "request x8, dry gain -> 1.413"
+      },
+      {
+        "sample_time": 24064,
+        "kind": "dry_gain_restore",
+        "detail": "crossfade settled, dry gain back to unity"
+      }
+    ],
+    "dry_pullup_and_switch_same_sample": true,
+    "peak_dry_gain": 1.4125375446227544,
+    "final_dry_gain": 1.0,
+    "final_factor": 8
+  },
+  "bus_branch_differential": {
+    "dry_rms": 0.15222527902462088,
+    "wet_rms": 0.1896530470803915,
+    "wet_minus_dry_rms": 0.24211699813936355,
+    "same_length": true
+  }
+}

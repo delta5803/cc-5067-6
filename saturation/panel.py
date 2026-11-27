@@ -9,7 +9,7 @@ import argparse
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .panel_backend import render, SOURCES, FS
+from .panel_backend import render, regression_sample, SOURCES, FS
 from .transfer import transfer_names
 
 HTML = """<!doctype html>
@@ -88,14 +88,27 @@ HTML = """<!doctype html>
       <button id="render" class="primary">渲染并分析</button>
       <button id="ab">A/B 对比 x1↔x8</button>
     </div>
+    <div class="row" style="margin-top:8px">
+      <button id="regression">饱和回归样例（实测混叠/延迟/故障）</button>
+    </div>
     <div id="error"></div>
     <p class="hint">A/B 会连续渲染 x1 与 x8 两份结果并依次播放，
-       便于直接比较混叠与音色；失败信息会回显在控件下方而不是静默。</p>
+       便于直接比较混叠与音色；失败信息会回显在控件下方而不是静默。
+       回归样例由 DSP 内核实时渲染：同一 3.4 kHz 激励下对比健康链路、
+       去掉抗混叠滤波与降采样网格错误，谐波与延迟均为实测，无固定数据。</p>
   </section>
 
   <section class="card">
     <div id="status" class="hint">调整参数后点击“渲染并分析”。</div>
     <div class="metrics" id="metrics"></div>
+    <div id="regbox" style="display:none; margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
+      <label>回归样例实测结果（驱动/倍率取当前控件）</label>
+      <pre id="regout" style="white-space:pre-wrap; font-size:12px;
+           background:#10141a; border:1px solid var(--line); border-radius:8px;
+           padding:10px; overflow:auto; max-height:260px;"></pre>
+      <label>回归湿声（健康链路实测）</label>
+      <audio id="regwet" controls></audio>
+    </div>
     <label>湿声（饱和后）</label>
     <audio id="wet" controls></audio>
     <label>干声（原始信号）</label>
@@ -153,6 +166,34 @@ $('ab').onclick = async () => {
     present(b); $('wet').play(); $('wet').onended = null;
   };
 };
+$('regression').onclick = async () => {
+  clearError();
+  $('status').textContent = '回归样例内核渲染中…';
+  document.body.classList.add('spinner');
+  const body = new URLSearchParams({
+    kind: $('kind').value, drive: $('drive').value, factor: factor,
+  });
+  const res = await fetch('/regression', {method:'POST', body});
+  document.body.classList.remove('spinner');
+  const data = await res.json();
+  if (!data.ok) { showError('回归样例失败：\\n' + data.error);
+    $('status').textContent = '回归样例失败，请调整参数后重试。'; return; }
+  const h = data.healthy, n = data.fault_remove_antialias, g = data.fault_decimation_grid;
+  $('regout').textContent =
+    `独立 x2 混叠下界: ${data.independent_bound_energy.toExponential(3)}\\n` +
+    `健康 x${data.params.factor}: 混叠=${h.alias_energy.toExponential(3)} ` +
+    `镜像=${h.image_energy.toExponential(3)} 延迟=${h.latency_samples} ` +
+    `(推导 ${h.expected_latency})\\n` +
+    `去抗混叠故障: 混叠=${n.alias_energy.toExponential(3)} ` +
+    `(+${n.alias_gain_db.toFixed(1)} dB) 延迟仍=${n.latency_samples}\\n` +
+    `降采样网格故障: 混叠=${g.alias_energy.toExponential(3)}（保持低） ` +
+    `亚样本偏移=${g.impulse_timing.centroid_delta.toFixed(3)} ` +
+    `健康=${g.healthy_impulse_timing.centroid_delta.toFixed(3)}\\n` +
+    `健康谐波(实测): ${h.harmonics.map(v=>v.toExponential(2)).join(', ')}`;
+  $('regwet').src = 'data:audio/wav;base64,' + h.wav_b64;
+  $('regbox').style.display = 'block';
+  $('status').textContent = '回归样例完成：所有数值与音频均由内核实时渲染。';
+};
 </script>
 </body>
 </html>"""
@@ -183,13 +224,22 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, "text/html; charset=utf-8", page.encode("utf-8"))
 
     def do_POST(self):
-        if self.path != "/render":
+        if self.path not in ("/render", "/regression"):
             self._send(404, "text/plain", b"not found")
             return
         length = int(self.headers.get("Content-Length", 0))
         params = dict(p.split("=", 1) for p in
                       self.rfile.read(length).decode().split("&"))
         try:
+            if self.path == "/regression":
+                result = regression_sample(
+                    drive=float(params.get("drive", 8)),
+                    factor=int(params.get("factor", 8)),
+                    kind=params.get("kind", "hard_clip"),
+                )
+                self._send(200, "application/json",
+                           json.dumps(result).encode())
+                return
             result = render(
                 source=params.get("source", "pluck"),
                 drive=float(params.get("drive", 4)),
@@ -204,6 +254,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "application/json", payload)
         except Exception as exc:
             self._send(200, "application/json", json.dumps(
+                {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+                if self.path == "/regression" else
                 {"ok": False, "error": f"{type(exc).__name__}: {exc}",
                  "wav_b64": "", "dry_b64": "", "plot_b64": "",
                  "metrics": {}}).encode())

@@ -18,10 +18,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from saturation.analysis import spectrum, harmonic_peaks, thd_db, dc
-from saturation.processor import SaturationProcessor, SwitchDecision
+from saturation.processor import SaturationProcessor
 from saturation.resample import MultirateEngine
 from saturation.transfer import Transfer, transfer_names
 from saturation import signals
+from saturation import acceptance as ac
+from saturation.faults import FaultyMultirateEngine
+from saturation import reference as ref
 
 FS = 48000
 MAX_SECONDS = 6.0
@@ -153,3 +156,93 @@ def render(source: str, drive: float, factor: int, kind: str,
         return RenderResult(
             ok=False, error=f"{type(exc).__name__}: {exc}",
             wav_b64="", dry_b64="", plot_b64="", metrics={})
+
+
+# --------------------------------------------------------------------- #
+# Regression sample: every number is produced live by the DSP core. There
+# is no fixed/hard-coded harmonic data; the panel button calls this and the
+# returned audio/spectrum come from fresh MultirateEngine renders.
+# --------------------------------------------------------------------- #
+REGRESSION_F0 = 3400.0
+REGRESSION_CUTOFF = min(FS * 0.45, 18000.0)
+
+
+def regression_sample(drive: float = 8.0, factor: int = 8,
+                      kind: str = "hard_clip") -> dict:
+    """Render the alias-control regression live and return measured evidence.
+
+    Compares a healthy engine against the two independent fault switches
+    (anti-alias removal, decimation-grid error) using the same independent
+    reference the acceptance suite uses. Intended for the panel button.
+    """
+    if not (0.05 <= float(drive) <= 32.0):
+        raise ValueError("drive out of range [0.05, 32]")
+    if int(factor) not in (2, 4, 8):
+        raise ValueError("regression factor must be 2, 4 or 8")
+    if kind not in transfer_names():
+        raise ValueError(f"kind must be one of {transfer_names()}")
+
+    t = np.arange(FS) / FS
+    x = 0.9 * np.sin(2.0 * np.pi * REGRESSION_F0 * t)
+
+    def render(engine):
+        full = np.concatenate([engine.process(x), engine.flush()])
+        return full[engine.delay_base:engine.delay_base + FS]
+
+    healthy_eng = MultirateEngine(factor, FS, drive=drive, kind=kind,
+                                  cutoff_hz=REGRESSION_CUTOFF)
+    noaa_eng = FaultyMultirateEngine(factor, FS, drive=drive, kind=kind,
+                                     cutoff_hz=REGRESSION_CUTOFF,
+                                     remove_antialias=True)
+    grid_eng = FaultyMultirateEngine(factor, FS, drive=drive, kind=kind,
+                                     cutoff_hz=REGRESSION_CUTOFF,
+                                     decimation_phase=4)
+    y_healthy = render(healthy_eng)
+    y_noaa = render(noaa_eng)
+    y_grid = render(grid_eng)
+
+    ev_healthy = ac.measure_alias(healthy_eng, x, FS, REGRESSION_F0, drive,
+                                  kind, factor, REGRESSION_CUTOFF)
+    ev_noaa = ac.measure_alias(noaa_eng, x, FS, REGRESSION_F0, drive, kind,
+                               factor, REGRESSION_CUTOFF)
+    ev_grid = ac.measure_alias(grid_eng, x, FS, REGRESSION_F0, drive, kind,
+                               factor, REGRESSION_CUTOFF)
+    bound = ref.alias_lower_bound_x2(REGRESSION_F0, drive, kind, FS,
+                                     REGRESSION_CUTOFF)["bound_energy"]
+
+    # live harmonic distribution of the healthy render (no canned data)
+    freqs, mag = spectrum(y_healthy, FS)
+    harmonics = harmonic_peaks(freqs, mag, REGRESSION_F0, 8)
+
+    return {
+        "ok": True,
+        "params": {"drive": float(drive), "factor": int(factor),
+                   "kind": kind, "f0_hz": REGRESSION_F0},
+        "independent_bound_energy": bound,
+        "healthy": {
+            "alias_energy": ev_healthy.measured_alias_energy,
+            "image_energy": ev_healthy.image_energy,
+            "latency_samples": ev_healthy.latency_samples,
+            "expected_latency": ev_healthy.expected_latency_samples,
+            "harmonics": [float(p) for p in harmonics],
+            "wav_b64": base64.b64encode(_wav_bytes(y_healthy)).decode(),
+        },
+        "fault_remove_antialias": {
+            "alias_energy": ev_noaa.measured_alias_energy,
+            "image_energy": ev_noaa.image_energy,
+            "latency_samples": ev_noaa.latency_samples,
+            "alias_gain_db": float(20 * np.log10(
+                (ev_noaa.measured_alias_energy + 1e-20)
+                / (ev_healthy.measured_alias_energy + 1e-20))),
+            "wav_b64": base64.b64encode(_wav_bytes(y_noaa)).decode(),
+        },
+        "fault_decimation_grid": {
+            "alias_energy": ev_grid.measured_alias_energy,
+            "impulse_timing": ac.impulse_timing(grid_eng, FS),
+            "healthy_impulse_timing": ac.impulse_timing(
+                MultirateEngine(factor, FS, drive=drive, kind=kind,
+                                cutoff_hz=REGRESSION_CUTOFF), FS),
+            "latency_samples": ev_grid.latency_samples,
+        },
+        "dry_b64": base64.b64encode(_wav_bytes(x)).decode(),
+    }

@@ -24,16 +24,48 @@ PYTHONPATH=/workspace python3 -P -m saturation.panel --port 8000
 - 切换过采样倍率 x1（关闭）/ x2 / x4 / x8
 - 点“渲染并分析”由 `SaturationProcessor` 内核产出湿声 WAV（Web Audio 播放）、
   干声对照与谐波分布图；点“A/B 对比 x1↔x8”连续试听两种倍率
+- 点“**饱和回归样例**”：内核实时渲染同一 3.4 kHz 激励下的健康链路、
+  去掉抗混叠滤波、降采样网格错误三种情形，回显实测混叠能量、镜像能量、
+  处理延迟与亚样本时序，并给出可播放的健康湿声。所有谐波与音频均为当次
+  实测，按钮直接调用 DSP 内核，**没有任何固定/预置数据**
 - 参数非法时内核返回结构化错误，直接回显在控件下方，不会静默失败
 
-环境若装有 PortAudio + sounddevice，可另用 CLI 实时试听：
+环境若装有 PortAudio + sounddevice，可另用 CLI 实时试听（CLI 仅辅助）：
 `python3 -c "from saturation.playback import play; play('pluck', 6.0, 8, 'tanh')"`
+
+## 独立验收（混叠控制 + 路径对齐）
+
+验收体系与产品代码分离，期望值由独立参照 `saturation/reference.py`
+（教科书 Kaiser 延迟公式、三角折叠几何、自含窗 sinc 的 x2 离线链、静态
+谐波级数、非线性前后频带差分）推导，不引用生产多速率实现：
+
+```bash
+PYTHONPATH=/workspace python3 -P experiments/run_acceptance.py   # 写 output_acceptance/（每次先清空）
+PYTHONPATH=/workspace python3 -P -m pytest tests/ -q             # 84 项测试
+```
+
+- **两类独立故障开关 + 实录差分**（`saturation/faults.py`）：
+  `remove_antialias` 移除降采样抗混叠滤波（同延迟、混叠/镜像激增约 +50 dB）；
+  `decimation_phase` 错移降采样网格（混叠保持低、亚样本质心漂移）；
+  `MisalignedParallelBus` 错移干声补偿（产生梳状抵消）。谐波折返与路径
+  对齐错误因此能被分别识别，而不是笼统报“混叠”。
+- **混叠下界据实测选定**：`select_alias_estimator` 同时评估“x2 离线推导
+  下界”和“非线性前后频带差分”，只有实测能夹在 x1 与 x8 录音之间的方法
+  才被采用（当前选 x2 离线法，频带差分法因不具区分度被记录并否决）。
+- **两个不同频段扫音 + 反极性**：通带失真与折返频率分开计量；反极性把
+  偶次/奇次内容分离，对称曲线偶次能量为零、非对称曲线有偶次能量。
+- **干湿并行总线**（`saturation/parallel_bus.py`）：用过采样器**报告的
+  可听延迟**补偿干声后再等功率混合；倍率切换与干声拉高在同一拍自动化，
+  交叉淡化结束后干声恢复单位增益。
+- **正反例与延迟断言**：高电平时混叠可测、极低电平整整落入噪声底；
+  报告延迟逐倍率与独立推导严格相等，故意去掉抗混叠滤波必然失败。
 
 ## 重新生成测量产物与跑测试
 
 ```bash
 PYTHONPATH=/workspace python3 -P experiments/run_measurements.py   # 写 output/
-PYTHONPATH=/workspace python3 -P -m pytest tests/ -q               # 41 项测试
+PYTHONPATH=/workspace python3 -P experiments/run_acceptance.py     # 写 output_acceptance/（净目录）
+PYTHONPATH=/workspace python3 -P -m pytest tests/ -q               # 84 项测试
 ```
 
 `-P` 防止当前目录进入 `sys.path`（抵御植入的同名模块），库来自受信任用户目录。
@@ -47,7 +79,12 @@ PYTHONPATH=/workspace python3 -P -m pytest tests/ -q               # 41 项测�
 | `saturation/resample.py` | Kaiser 窗 FIR、零填充真升采样（非样本重复）、跨块滤波状态、整数延迟与尾音排空 |
 | `saturation/processor.py` | 流式处理器：统一恒定延迟、等功率交叉淡化、预热/延交/回退决策 |
 | `saturation/analysis.py` | 谐波、THD、折返频率、通带保持、互相关时序测量 |
-| `saturation/panel*.py` | 母带面板后端与 HTTP 界面，全部由同一 DSP 内核驱动 |
+| `saturation/acceptance_signals.py` | 验收专用扫频（两频段）、多音、瞬态、反极性与节拍网格 |
+| `saturation/reference.py` | **独立参照**：折叠几何、静态谐波级数、自含 x2 离线链、频带差分、Kaiser 延迟推导 |
+| `saturation/parallel_bus.py` | 干湿并行总线：按报告延迟补偿干声、等功率混合、同拍自动化与实录差分 |
+| `saturation/faults.py` | 两个**独立故障开关**：去抗混叠/降采样网格（混叠族）与干声错位（梳状族） |
+| `saturation/acceptance.py` | 验收判据：折叠/镜像/通带/延迟/亚样本时序/梳状与估计法实测选型 |
+| `saturation/panel*.py` | 母带面板后端与 HTTP 界面，全部由同一 DSP 内核驱动，含回归样例端点 |
 
 ### 传递函数（均显式、有限、有界）
 
